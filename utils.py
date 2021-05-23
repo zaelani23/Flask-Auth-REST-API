@@ -30,14 +30,15 @@ def db_write(query, params):
     cursor = db.connection.cursor()
     try:
         cursor.execute(query, params)
+        insert_id = db.connection.insert_id()
         db.connection.commit()
         cursor.close()
 
-        return True
+        return {"status": True, "insert_id": insert_id}
 
     except MySQLdb._exceptions.IntegrityError:
         cursor.close()
-        return False
+        return {"status": False, "insert_id": 0}
 
 
 def generate_salt():
@@ -60,10 +61,14 @@ def generate_jwt_token(content):
     token = str(encoded_content).split("'")[1]
     return token
 
+def decode_token(token):
+    decode = jwt.decode(token, JWT_SECRET_KEY, algorithm="HS256")
+    return decode
+
 
 def validate_user_input(input_type, **kwargs):
     if input_type == "authentication":
-        if len(kwargs["email"]) <= 255 and len(kwargs["password"]) <= 255:
+        if len(kwargs["email"]) <= 255 and len(kwargs["password"]) <= 255 and len(kwargs["nama"]) <= 255:
             return True
         else:
             return False
@@ -79,8 +84,9 @@ def validate_user(email, password):
 
         if password_hash == saved_password_hash:
             user_id = current_user[0]["id"]
-            jwt_token = generate_jwt_token({"id": user_id})
-            return jwt_token
+            user_role = current_user[0]["role"]
+            # jwt_token = generate_jwt_token({"id": user_id})
+            return {"user_id": user_id, "role": user_role}
         else:
             return False
 
